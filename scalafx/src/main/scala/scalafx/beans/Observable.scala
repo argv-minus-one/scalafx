@@ -43,6 +43,15 @@ object Observable {
  * @define IV `InvalidationListener`
  * @define IVURL [[http://docs.oracle.com/javase/8/javafx/api/javafx/beans/InvalidationListener.html `InvalidationListener`]]
  * @define SUBRET A new [[scalafx.event.subscriptions.Subscription]] to remove $JFX $IV.
+ * @define AboutWeakListeners
+ *   Because the listener function is attached using a
+ *   [[java.lang.ref.WeakReference weak reference]], the listener can be garbage collected before
+ *   the event source is. Use this when you need a short-lived object to listen to events emitted
+ *   by a longer-lived one.
+ *
+ *   The returned `Subscription` contains a strong reference to the listener function. '''Do not
+ *   throw it away.''' Store it in a field on the calling object, so that the listener function
+ *   isn't garbage collected too soon.
  */
 trait Observable extends SFXDelegate[jfxb.Observable] {
 

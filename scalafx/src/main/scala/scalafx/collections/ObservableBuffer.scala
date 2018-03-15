@@ -549,16 +549,8 @@ class ObservableBuffer[T](override val delegate: jfxc.ObservableList[T] = jfxc.F
 
   import scalafx.collections.ObservableBuffer._
 
-  /**
-    * Add a listener function to list's changes. This function '''will handle''' this buffer's
-    * modifications data.
-    *
-    * @param op Function that will handle this $OB's modifications data to be activated when
-    *           some change was made.
-    * @return A subscription object
-    */
-  def onChange[T1 >: T](op: (ObservableBuffer[T], Seq[Change[T1]]) => Unit): Subscription = {
-    val listener = new jfxc.ListChangeListener[T1] {
+  private def onChangeListener[T1 >: T](op: (ObservableBuffer[T], Seq[Change[T1]]) => Unit) = {
+    new jfxc.ListChangeListener[T1] {
       def onChanged(c: jfxc.ListChangeListener.Change[_ <: T1]) {
         var changes = ArrayBuffer.empty[Change[T1]]
         while (c.next()) {
@@ -580,12 +572,56 @@ class ObservableBuffer[T](override val delegate: jfxc.ObservableList[T] = jfxc.F
         op(ObservableBuffer.this, changes)
       }
     }
+  }
+
+  /**
+    * Add a listener function to list's changes. This function '''will handle''' this buffer's
+    * modifications data.
+    *
+    * @param op Function that will handle this $OB's modifications data to be activated when
+    *           some change was made.
+    * @return A subscription object
+    */
+  def onChange[T1 >: T](op: (ObservableBuffer[T], Seq[Change[T1]]) => Unit): Subscription = {
+    val listener = onChangeListener(op)
 
     delegate.addListener(listener)
 
     new Subscription {
       def cancel() {
         delegate.removeListener(listener)
+      }
+    }
+  }
+
+  /**
+    * Add a listener function to list's changes, using a weak reference. This function '''will
+    * handle''' this buffer's modifications data.
+    *
+    * $AboutWeakListeners
+    *
+    * @param op Function that will handle this $OB's modifications data to be activated when
+    *           some change was made.
+    * @return A subscription object
+    * @see [[javafx.collections.WeakListChangeListener]]
+    */
+  def onChangeWeak[T1 >: T](op: (ObservableBuffer[T], Seq[Change[T1]]) => Unit): Subscription = {
+    new Subscription {
+      private val listener = onChangeListener(op)
+      private val weakListener = new jfxc.WeakListChangeListener(listener)
+
+      delegate.addListener(weakListener)
+
+      def cancel() {
+        delegate.removeListener(weakListener)
+      }
+    }
+  }
+
+  private def onChangeListener[T1 >: T](op: => Unit) = {
+    new jfxc.ListChangeListener[T1] {
+      def onChanged(c: jfxc.ListChangeListener.Change[_ <: T1]) {
+        op
       }
     }
   }
@@ -598,17 +634,36 @@ class ObservableBuffer[T](override val delegate: jfxc.ObservableList[T] = jfxc.F
     * @return A `subscription` object
     */
   def onChange[T1 >: T](op: => Unit): Subscription = {
-    val listener = new jfxc.ListChangeListener[T1] {
-      def onChanged(c: jfxc.ListChangeListener.Change[_ <: T1]) {
-        op
-      }
-    }
+    val listener = onChangeListener(op)
 
     delegate.addListener(listener)
 
     new Subscription {
       def cancel() {
         delegate.removeListener(listener)
+      }
+    }
+  }
+
+  /**
+    * Add a listener function to list's changes, using a weak reference. This function '''will not
+    * handle''' this buffer's modifications data.
+    *
+    * $AboutWeakListeners
+    *
+    * @param op No-argument function to be activated when some change in this $OB was made.
+    * @return A `subscription` object
+    * @see [[javafx.collections.WeakListChangeListener]]
+    */
+  def onChangeWeak[T1 >: T](op: => Unit): Subscription = {
+    new Subscription {
+      private val listener = onChangeListener(op)
+      private val weakListener = new jfxc.WeakListChangeListener(listener)
+
+      delegate.addListener(weakListener)
+
+      def cancel() {
+        delegate.removeListener(weakListener)
       }
     }
   }
